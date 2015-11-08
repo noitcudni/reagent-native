@@ -1,17 +1,21 @@
 package com.reagentnative;
 
+import java.io.IOException;
+
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
+
 import android.app.Activity;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 
+//import com.facebook.react.BuildConfig;
 import com.facebook.react.LifecycleState;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.shell.MainReactPackage;
-//import com.facebook.soloader.SoLoader;
 
 public class MainActivity extends Activity implements DefaultHardwareBackBtnHandler {
   public static final String TAG = "MainActivity";
@@ -19,6 +23,7 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
 
   private ReactInstanceManager mReactInstanceManager;
   private ReactRootView mReactRootView;
+  private JmDNS jmdns;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +43,18 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
     mReactRootView.startReactApplication(mReactInstanceManager, "ReagentNative", null);
 
     setContentView(mReactRootView);
+  }
+
+  private void setUpmDNS() {
+    try {
+    jmdns = JmDNS.create();
+    ServiceInfo serviceInfo = ServiceInfo.create("_test._tcp.local.",
+        "AndroidTest", 0,
+        "test from android");
+    jmdns.registerService(serviceInfo);
+    } catch (IOException e) {
+
+    }
   }
 
   @Override
