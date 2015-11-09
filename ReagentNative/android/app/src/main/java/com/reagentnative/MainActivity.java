@@ -1,16 +1,20 @@
 package com.reagentnative;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
 import android.app.Activity;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 
-//import com.facebook.react.BuildConfig;
 import com.facebook.react.LifecycleState;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
@@ -42,20 +46,51 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
 
     mReactRootView.startReactApplication(mReactInstanceManager, "ReagentNative", null);
 
+    setUpmDNS();
     setContentView(mReactRootView);
   }
 
+
   private void setUpmDNS() {
     try {
-    jmdns = JmDNS.create();
-    ServiceInfo serviceInfo = ServiceInfo.create("_test._tcp.local.",
-        "AndroidTest", 0,
-        "test from android");
-    jmdns.registerService(serviceInfo);
+      WifiManager wifi = (WifiManager) getSystemService(android.content.Context.WIFI_SERVICE);
+      final InetAddress deviceIPAddress = getDeviceIpAddress(wifi);
+
+      Log.d(TAG, ">> deviceIPAddress: " + deviceIPAddress.toString());
+      //lock = wifi.createMulticastLock(getClass().getName());
+      //lock.setReferenceCounted(true);
+      //lock.acquire();
+      Log.d(TAG, "Starting ZeroConf probe...");
+      jmdns = JmDNS.create(deviceIPAddress, "android.simulator.device");
+
+      jmdns = JmDNS.create();
+      ServiceInfo serviceInfo = ServiceInfo.create("_test._tcp.local.",
+          "AndroidTest", 0,
+          "test from android");
+      jmdns.registerService(serviceInfo);
     } catch (IOException e) {
 
     }
   }
+
+  private InetAddress getDeviceIpAddress(WifiManager wifi) {
+    InetAddress result = null;
+    try {
+      // default to Android localhost
+      result = InetAddress.getByName("10.0.0.2");
+
+      // figure out our wifi address, otherwise bail
+      WifiInfo wifiinfo = wifi.getConnectionInfo();
+      int intaddr = wifiinfo.getIpAddress();
+      byte[] byteaddr = new byte[] { (byte) (intaddr & 0xff), (byte) (intaddr >> 8 & 0xff), (byte) (intaddr >> 16 & 0xff), (byte) (intaddr >> 24 & 0xff) };
+      result = InetAddress.getByAddress(byteaddr);
+    } catch (UnknownHostException ex) {
+      Log.w(TAG, String.format("getDeviceIpAddress Error: %s", ex.getMessage()));
+    }
+
+    return result;
+  }
+
 
   @Override
   public void onStart() {
