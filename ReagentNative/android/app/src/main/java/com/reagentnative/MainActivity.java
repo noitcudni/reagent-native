@@ -8,13 +8,16 @@ import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
 import android.app.Activity;
-import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.KeyEvent;
 
+//import com.facebook.react.BuildConfig;
 import com.facebook.react.LifecycleState;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
@@ -24,14 +27,19 @@ import com.facebook.react.shell.MainReactPackage;
 public class MainActivity extends Activity implements DefaultHardwareBackBtnHandler {
   public static final String TAG = "MainActivity";
 
+  Handler handler = new Handler();
 
   private ReactInstanceManager mReactInstanceManager;
   private ReactRootView mReactRootView;
   private JmDNS jmdns;
+  private MulticastLock lock;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+    StrictMode.setThreadPolicy(policy);
+
     mReactRootView = new ReactRootView(this);
 
     //Log.d(TAG, "BuildConfig.Debug: " + BuildConfig.DEBUG);
@@ -46,38 +54,21 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
 
     mReactRootView.startReactApplication(mReactInstanceManager, "ReagentNative", null);
 
-    setUpmDNS();
     setContentView(mReactRootView);
-  }
 
+    handler.postDelayed(new Runnable() {
+      public void run() {
+        setupmDNS();
+      }
+    }, 1000);
 
-  private void setUpmDNS() {
-    try {
-      WifiManager wifi = (WifiManager) getSystemService(android.content.Context.WIFI_SERVICE);
-      final InetAddress deviceIPAddress = getDeviceIpAddress(wifi);
-
-      Log.d(TAG, ">> deviceIPAddress: " + deviceIPAddress.toString());
-      //lock = wifi.createMulticastLock(getClass().getName());
-      //lock.setReferenceCounted(true);
-      //lock.acquire();
-      Log.d(TAG, "Starting ZeroConf probe...");
-      jmdns = JmDNS.create(deviceIPAddress, "android.simulator.device");
-
-      jmdns = JmDNS.create();
-      ServiceInfo serviceInfo = ServiceInfo.create("_test._tcp.local.",
-          "AndroidTest", 0,
-          "test from android");
-      jmdns.registerService(serviceInfo);
-    } catch (IOException e) {
-
-    }
   }
 
   private InetAddress getDeviceIpAddress(WifiManager wifi) {
     InetAddress result = null;
     try {
       // default to Android localhost
-      result = InetAddress.getByName("10.0.0.2");
+      result = InetAddress.getByName("127.0.0.1");
 
       // figure out our wifi address, otherwise bail
       WifiInfo wifiinfo = wifi.getConnectionInfo();
@@ -91,22 +82,30 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
     return result;
   }
 
+  protected void setupmDNS() {
+    try {
+      WifiManager wifi = (WifiManager) getSystemService(android.content.Context.WIFI_SERVICE);
+      final InetAddress deviceIPAddress = getDeviceIpAddress(wifi);
+      //InetAddress deviceIPAddress = InetAddress.getLocalHost();
+
+      Log.d(TAG, ">> deviceIPAddress: " + deviceIPAddress.toString());
+      lock = wifi.createMulticastLock(getClass().getName());
+      lock.setReferenceCounted(true);
+      lock.acquire();
+
+      jmdns = JmDNS.create(deviceIPAddress, "android.simulator.device");
+      ServiceInfo serviceInfo = ServiceInfo.create("_http._tcp.local.",
+          "Ambly Reagent on Nexus", 8888,
+          "Lih Android Test");
+      jmdns.registerService(serviceInfo);
+    } catch (IOException e) {
+      Log.e(TAG, e.getMessage(), e);
+    }
+  }
 
   @Override
   public void onStart() {
     super.onStart();
-    registerService();
-  }
-
-  private void registerService() {
-    // Create the NsdServiceInfo object, and populate it.
-    NsdServiceInfo serviceInfo  = new NsdServiceInfo();
-
-    // The name is subject to change based on conflicts
-    // with other services advertised on the same network.
-    serviceInfo.setServiceName("reagent_android_native");
-    serviceInfo.setServiceType("_http._tcp.");
-    serviceInfo.setPort(9091);
   }
 
   @Override
