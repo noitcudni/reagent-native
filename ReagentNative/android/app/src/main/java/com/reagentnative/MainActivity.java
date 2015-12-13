@@ -25,44 +25,43 @@ import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.shell.MainReactPackage;
 
 public class MainActivity extends Activity implements DefaultHardwareBackBtnHandler {
+
   public static final String TAG = "MainActivity";
 
   Handler handler = new Handler();
 
-  private ReactInstanceManager mReactInstanceManager;
-  private ReactRootView mReactRootView;
   private JmDNS jmdns;
   private MulticastLock lock;
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-    StrictMode.setThreadPolicy(policy);
+    private ReactInstanceManager mReactInstanceManager;
+    private ReactRootView mReactRootView;
 
-    mReactRootView = new ReactRootView(this);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mReactRootView = new ReactRootView(this);
 
-    //Log.d(TAG, "BuildConfig.Debug: " + BuildConfig.DEBUG);
-    mReactInstanceManager = ReactInstanceManager.builder()
-      .setApplication(getApplication())
-      .setBundleAssetName("index.android.bundle")
-      .setJSMainModuleName("index.android")
-      .addPackage(new MainReactPackage())
-      .setUseDeveloperSupport(BuildConfig.DEBUG)
-      .setInitialLifecycleState(LifecycleState.RESUMED)
-      .build();
+        mReactInstanceManager = ReactInstanceManager.builder()
+                .setApplication(getApplication())
+                .setBundleAssetName("index.android.bundle")
+                .setJSMainModuleName("index.android")
+                .addPackage(new MainReactPackage())
+                .setUseDeveloperSupport(BuildConfig.DEBUG)
+                .setInitialLifecycleState(LifecycleState.RESUMED)
+                .build();
 
-    mReactRootView.startReactApplication(mReactInstanceManager, "ReagentNative", null);
+        mReactRootView.startReactApplication(mReactInstanceManager, "ReagentNative", null);
 
-    setContentView(mReactRootView);
+        setContentView(mReactRootView);
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
 
-    handler.postDelayed(new Runnable() {
-      public void run() {
-        setupmDNS();
-      }
-    }, 1000);
-
-  }
+        handler.postDelayed(new Runnable() {
+          public void run() {
+            setupmDNS();
+          }
+        }, 1000);
+    }
 
   private InetAddress getDeviceIpAddress(WifiManager wifi) {
     InetAddress result = null;
@@ -81,6 +80,7 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
 
     return result;
   }
+
 
   protected void setupmDNS() {
     try {
@@ -103,40 +103,44 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
     }
   }
 
-  @Override
-  public void onStart() {
-    super.onStart();
-  }
-
-  @Override
-  public boolean onKeyUp(int keyCode, KeyEvent event) {
-    if (keyCode == KeyEvent.KEYCODE_MENU && mReactInstanceManager != null) {
-      mReactInstanceManager.showDevOptionsDialog();
-      return true;
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_MENU && mReactInstanceManager != null) {
+            mReactInstanceManager.showDevOptionsDialog();
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
     }
-    return super.onKeyUp(keyCode, event);
-  }
 
-  @Override
-  public void invokeDefaultOnBackPressed() {
-    super.onBackPressed();
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-
-    if (mReactInstanceManager != null) {
-      mReactInstanceManager.onPause();
+    @Override
+    public void onBackPressed() {
+      if (mReactInstanceManager != null) {
+        mReactInstanceManager.onBackPressed();
+      } else {
+        super.onBackPressed();
+      }
     }
-  }
 
-  @Override
-  protected void onResume() {
-    super.onResume();
-
-    if (mReactInstanceManager != null) {
-      mReactInstanceManager.onResume(this);
+    @Override
+    public void invokeDefaultOnBackPressed() {
+      super.onBackPressed();
     }
-  }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (mReactInstanceManager != null) {
+            mReactInstanceManager.onPause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (mReactInstanceManager != null) {
+            mReactInstanceManager.onResume(this, this);
+        }
+    }
 }
